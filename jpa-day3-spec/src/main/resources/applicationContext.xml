@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/data/jpa
+		http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+    <!--spring和spring data jpa的配置-->
+    <!--1、创建entityManagerFactory，交给spring管理-->
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <!--注入数据源-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--实体类包扫描-->
+        <property name="packagesToScan" value="com.newstar.domain"/>
+        <!--实现厂家-->
+        <property name="persistenceProvider">
+            <bean class="org.hibernate.jpa.HibernatePersistenceProvider"/>
+        </property>
+        <!--jpa供应商适配器-->
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+                <!--表生成策略：是否自动生成表-->
+                <property name="generateDdl" value="false"/>
+                <!--数据库类型-->
+                <property name="database" value="MYSQL"/>
+                <!--数据库方言-->
+                <property name="databasePlatform" value="org.hibernate.dialect.MySQLDialect"/>
+                <!--是否在控制台显示sql-->
+                <property name="showSql" value="true"/>
+            </bean>
+        </property>
+        <!--jpa方言：高级特性-->
+        <property name="jpaDialect">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect"/>
+        </property>
+    </bean>
+    <!--2、创建数据源-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="user" value="root"/>
+        <property name="password" value="root"/>
+        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/jpa"/>
+        <property name="driverClass" value="com.mysql.jdbc.Driver"/>
+    </bean>
+    <!--3、整合spring data jpa-->
+    <jpa:repositories base-package="com.newstar.dao" entity-manager-factory-ref="entityManagerFactory" transaction-manager-ref="transactionManager"/>
+    <!--4、事务管理器-->
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <!--注入实体管理器工厂-->
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>
+    </bean>
+    <!--5、声明式事务-->
+    <aop:config>
+        <!--切点-->
+        <aop:pointcut id="pointcut" expression="execution(* com.newstar.service.*.*(..))"/>
+        <!--通知器-->
+        <aop:advisor pointcut-ref="pointcut" advice-ref="txAdvice"/>
+    </aop:config>
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="save*" propagation="REQUIRED"/>
+            <tx:method name="create*" propagation="REQUIRED"/>
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="delete*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="find*" propagation="SUPPORTS" read-only="true"/>
+            <tx:method name="select*" propagation="SUPPORTS" read-only="true"/>
+            <tx:method name="get*" propagation="SUPPORTS" read-only="true"/>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+    <!--6、包扫描-->
+    <context:component-scan base-package="com.newstar"/>
+</beans>
